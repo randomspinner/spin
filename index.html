@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Realistic Rigged Spinner</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      color: black;
+    }
+    #container {
+      position: relative;
+      width: 400px;
+      margin: 50px auto;
+    }
+    #pointer {
+      width: 0;
+      height: 0;
+      border-left: 20px solid transparent;
+      border-right: 20px solid transparent;
+      border-top: 40px solid red;
+      position: absolute;
+      top: -40px;
+      left: 180px;
+      z-index: 10;
+    }
+    canvas {
+      display: block;
+    }
+    button {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background-color: black;
+      color: white;
+      font-size: 14px;
+      border: none;
+      cursor: pointer;
+      z-index: 20;
+      padding: 0;
+    }
+    #result {
+      font-size: 24px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <div id="pointer"></div>
+    <canvas id="wheelCanvas" width="400" height="400"></canvas>
+    <button onclick="spinWheel()">SPIN</button>
+  </div>
+  <div id="result"></div>
+
+  <script>
+    const canvas = document.getElementById("wheelCanvas");
+    const ctx = canvas.getContext("2d");
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = 180;
+
+    const numbers = shuffle(Array.from({ length: 21 }, (_, i) => i)); // 0 to 20
+    const segments = numbers.length;
+    const anglePerSlice = 2 * Math.PI / segments;
+
+    let currentAngle = 0;
+    let spinCount = 0;
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function drawWheel(angleOffset = 0) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.translate(centerX, centerY);
+      ctx.rotate(angleOffset);
+      ctx.translate(-centerX, -centerY);
+
+      for (let i = 0; i < segments; i++) {
+        const startAngle = i * anglePerSlice;
+        const endAngle = startAngle + anglePerSlice;
+
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+        ctx.fillStyle = `hsl(${i * (360 / segments)}, 70%, 60%)`;
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(startAngle + anglePerSlice / 2);
+        ctx.fillStyle = "black";
+        ctx.font = "bold 18px Arial";
+        ctx.textAlign = "right";
+        ctx.fillText(numbers[i], radius - 10, 5);
+        ctx.restore();
+      }
+
+      ctx.restore();
+    }
+
+    drawWheel();
+
+    function spinWheel() {
+      spinCount++;
+
+      let result;
+      if (spinCount === 1) result = 4;
+      else if (spinCount === 2) result = 18;
+      else if (spinCount === 3) result = 15;
+      else if (spinCount === 4) result = 1;
+      else result = numbers[Math.floor(Math.random() * segments)];
+
+      const index = numbers.indexOf(result);
+      const sliceAngle = 2 * Math.PI / segments;
+      const targetAngle = (1.5 * Math.PI) - (index * sliceAngle) - (sliceAngle / 2);
+
+      const spins = 22 * 6 * Math.PI;
+      const totalRotation = spins + targetAngle;
+      const duration = 9000;
+
+      let startTime;
+
+      function animateSpin(timestamp) {
+        if (!startTime) startTime = timestamp;
+        const elapsed = timestamp - startTime;
+        const t = Math.min(elapsed / duration, 1);
+        const easedT = 1 - Math.pow(1 - t, 4);
+
+        const angle = easedT * totalRotation;
+        drawWheel(angle);
+
+        if (t < 1) {
+          requestAnimationFrame(animateSpin);
+        } else {
+          currentAngle = angle % (2 * Math.PI);
+          document.getElementById("result").innerText = "It landed on: " + result;
+        }
+      }
+
+      requestAnimationFrame(animateSpin);
+    }
+  </script>
+</body>
+</html>
